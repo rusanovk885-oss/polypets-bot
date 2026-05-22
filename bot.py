@@ -372,34 +372,49 @@ async def handle_message(message: Message):
         await message.answer(f"🍗 **Еда в магазине:**\n\n{food_list}\n\nНапиши **Купить [название]**\nПример: Купить Зерно", reply_markup=shop_menu_kb())
         return
     
-   # ========== ПОКУПКА ==========
-if text.startswith("Купить "):
-    item = text.replace("Купить ", "").strip().lower()
-    
-    # Поиск питомца (сравниваем без учёта регистра и лишних пробелов)
-    found = False
-    for pet_id, pet in PETS.items():
-        pet_name_lower = pet["name"].lower().replace("🐔", "").replace("🐊", "").replace("🐹", "").replace("🐉", "").replace("🐱", "").strip()
-        item_clean = item.replace("🐔", "").replace("🐊", "").replace("🐹", "").replace("🐉", "").replace("🐱", "").strip()
+    # ========== ПОКУПКА ==========
+    if text.startswith("Купить "):
+        item = text.replace("Купить ", "").strip().lower()
         
-        if pet_name_lower == item_clean or pet["name"].lower() == item_clean:
-            if pet_id in user["pets"]:
-                await message.answer(f"❌ У тебя уже есть {pet['name']}!")
-            elif user["dubli"] >= pet["price"]:
-                user["dubli"] -= pet["price"]
-                user["pets"].append(pet_id)
-                user["stats"]["pets_bought"] = user["stats"].get("pets_bought", 0) + 1
-                # Обновляем квест
-                user["daily_quests"]["buy_pet"] = user["daily_quests"].get("buy_pet", 0) + 1
-                check_achievements(user_id)
-                check_daily_quests(user_id)
-                await message.answer(f"✅ Ты купил {pet['name']}! 💖\nОсталось дублей: {user['dubli']}", reply_markup=shop_menu_kb())
-            else:
-                await message.answer(f"❌ Не хватает дублей! Нужно {pet['price']}💎")
-            found = True
-            break
-    
-    if not found:
+        # Поиск питомца
+        found = False
+        for pet_id, pet in PETS.items():
+            pet_name_lower = pet["name"].lower().replace("🐔", "").replace("🐊", "").replace("🐹", "").replace("🐉", "").replace("🐱", "").strip()
+            item_clean = item.replace("🐔", "").replace("🐊", "").replace("🐹", "").replace("🐉", "").replace("🐱", "").strip()
+            
+            if pet_name_lower == item_clean or pet["name"].lower() == item_clean:
+                if pet_id in user["pets"]:
+                    await message.answer(f"❌ У тебя уже есть {pet['name']}!")
+                elif user["dubli"] >= pet["price"]:
+                    user["dubli"] -= pet["price"]
+                    user["pets"].append(pet_id)
+                    user["stats"]["pets_bought"] = user["stats"].get("pets_bought", 0) + 1
+                    user["daily_quests"]["buy_pet"] = user["daily_quests"].get("buy_pet", 0) + 1
+                    await message.answer(f"✅ Ты купил {pet['name']}! 💖\nОсталось дублей: {user['dubli']}", reply_markup=shop_menu_kb())
+                else:
+                    await message.answer(f"❌ Не хватает дублей! Нужно {pet['price']}💎")
+                found = True
+                break
+        
+        if not found:
+            # Поиск еды
+            for food_id, food in FOOD.items():
+                food_name_lower = food["name"].lower().replace("🌽", "").replace("🍖", "").replace("🍭", "").replace("🍰", "").strip()
+                item_clean = item.replace("🌽", "").replace("🍖", "").replace("🍭", "").replace("🍰", "").strip()
+                
+                if food_name_lower == item_clean or food["name"].lower() == item_clean:
+                    if user["dubli"] >= food["price"]:
+                        user["dubli"] -= food["price"]
+                        user["inventory"][food_id] = user["inventory"].get(food_id, 0) + 1
+                        await message.answer(f"✅ Ты купил {food['name']}! 💖\nОсталось дублей: {user['dubli']}", reply_markup=shop_menu_kb())
+                    else:
+                        await message.answer(f"❌ Не хватает дублей! Нужно {food['price']}💎")
+                    found = True
+                    break
+        
+        if not found:
+            await message.answer("❌ Такой товар не найден!\n\n📝 **Правильное написание:**\nКупить Курица\nКупить Крокодил\nКупить Хомяк\nКупить Дракон\nКупить Кот\n\n🍗 **Или еду:**\nКупить Зерно\nКупить Мясо\nКупить Конфета\nКупить Торт")
+        return
         # Поиск еды
         for food_id, food in FOOD.items():
             food_name_lower = food["name"].lower().replace("🌽", "").replace("🍖", "").replace("🍭", "").replace("🍰", "").strip()
