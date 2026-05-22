@@ -413,7 +413,7 @@ async def handle_message(message: Message):
         await message.answer("🎮 **Выбери игру:**\n\nСтавки от 5 до 50💎\nУдачи! 🍀", reply_markup=games_kb())
         return
     
-    # Обработка игр
+    # Игры
     if text == "🎲 Орёл/Решка":
         kb = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="Орел"), KeyboardButton(text="Решка")], [KeyboardButton(text="◀️ Назад")]], resize_keyboard=True)
         await message.answer("Выбери:", reply_markup=kb)
@@ -510,23 +510,32 @@ async def handle_message(message: Message):
         await message.answer(msg, reply_markup=games_kb())
         return
     
-    # ========== МАГАЗИН ==========
+    # Магазин
     if text == "🏪 Магазин":
         kb = InlineKeyboardMarkup(inline_keyboard=[])
         for i, (pet_id, pet) in enumerate(PETS.items()):
             if i >= 20:
                 break
             kb.inline_keyboard.append([InlineKeyboardButton(text=f"{pet['name']} — {pet['price']}💎", callback_data=f"buy_{pet_id}")])
-        kb.inline_keyboard.append([InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_menu")])
+        kb.inline_keyboard.append([InlineKeyboardButton(text="◀️ Назад", callback_data="back_to_menu")])
         await message.answer(f"🏪 **Магазин питомцев** 🏪\n\nВсего питомцев: {len(PETS)}\n\nВыбери питомца:", reply_markup=kb)
         return
     
+    # Дать имя
     if text == "✏️ Дать имя":
         if len(user["pets"]) == 0:
             await message.answer("🐾 У тебя пока нет питомцев! Купи сначала в магазине.", reply_markup=main_kb())
         else:
-            pets_list = "\n".join([f"{i+1}. {PETS[p]['name']}" for i, p in enumerate(user["pets"])])
-            await message.answer(f"🐾 **Выбери питомца по номеру и напиши имя:**\n\n{pets_list}\n\nПример: `1 Буся`", reply_markup=back_kb())
+            pets_list = []
+            for i, pet_id in enumerate(user["pets"]):
+                pet = PETS[pet_id]
+                current_name = user["pet_names"].get(pet_id, "")
+                name_str = f" (имя: {current_name})" if current_name else ""
+                pets_list.append(f"{i+1}. {pet['name']}{name_str}")
+            await message.answer(
+                f"🐾 **Выбери питомца по номеру и напиши имя:**\n\n" + "\n".join(pets_list) + "\n\nПример: `1 Буся`",
+                reply_markup=back_kb()
+            )
             user["awaiting_name"] = True
         return
     
@@ -546,9 +555,10 @@ async def handle_message(message: Message):
             await message.answer("❌ Напиши в формате: `номер имя`\nПример: `1 Буся`", reply_markup=back_kb())
         return
     
+    # Мои питомцы
     if text == "🐾 Мои питомцы":
         if len(user["pets"]) == 0:
-            await message.answer("🐾 У тебя пока нет питомцев! Купи в магазине /shop", reply_markup=main_kb())
+            await message.answer("🐾 У тебя пока нет питомцев! Купи в магазине.", reply_markup=main_kb())
         else:
             pets_list = []
             for i, pet_id in enumerate(user["pets"]):
@@ -559,6 +569,7 @@ async def handle_message(message: Message):
             await message.answer(f"🐾 **Твои питомцы** ({len(user['pets'])}):\n\n" + "\n".join(pets_list), reply_markup=main_kb())
         return
     
+    # Бонус
     if text == "🎁 Бонус":
         today = datetime.now().date().isoformat()
         if user.get("last_daily") == today:
@@ -570,6 +581,7 @@ async def handle_message(message: Message):
             await message.answer(f"🎁 **Ежедневный бонус!** +{bonus} дублей! 💰\nТеперь у тебя {user['dubli']}💎", reply_markup=main_kb())
         return
     
+    # Дубли
     if text == "💰 Дубли":
         await message.answer(
             f"💰 **Твой баланс:** {user['dubli']} дублей!\n\n"
@@ -581,12 +593,4 @@ async def handle_message(message: Message):
         )
         return
     
-    if text == "🏆 Топ":
-        players = []
-        for uid, data in users.items():
-            try:
-                chat = await bot.get_chat(uid)
-                name = chat.username or chat.first_name or str(uid)
-            except:
-                name = str(uid)
-            players.append((name,
+    # Т
