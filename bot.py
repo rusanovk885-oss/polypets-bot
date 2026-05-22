@@ -6,7 +6,7 @@ from aiogram.filters import Command
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
 
 # ========== ТОКЕН (ВСТАВЬ СВОЙ) ==========
-TOKEN = "ТВОЙ_НОВЫЙ_ТОКЕН"
+TOKEN = "8949697674:AAHAZywQYpmpYzx4BE2LJY1JiGC76WxWRx4"
 
 # ========== АДМИНЫ ==========
 MASTER_ADMIN_ID = 6900319945
