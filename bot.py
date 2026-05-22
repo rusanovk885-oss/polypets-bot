@@ -7,7 +7,7 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 
-TOKEN = os.getenv("8085068905:AAE1CeeFPTGc94jEaFgUVP7tUO9famyzKZ4")
+TOKEN = "8085068905:AAE1ceefPTGc94jEaFgUVP7tUO9famyzKZ4"
 MASTER_ADMIN_ID = 6900319945
 POLINA_ID = 8428411159
 DATA_FILE = "poly_bot_data.json"
