@@ -6,7 +6,7 @@ from aiogram.filters import Command
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 
 # ========== ТОКЕН (ВСТАВЛЕН ТВОЙ) ==========
-TOKEN = "8085068905:AAE1CeeFPTGc94jEaFgUVP7tUO9famyzKZ4"
+TOKEN = "8949697674:AAHAZywQYpmpYzx4BE2LJY1JiGC76WxWRx4"
 
 # ========== ID ==========
 MASTER_ADMIN_ID = 6900319945
