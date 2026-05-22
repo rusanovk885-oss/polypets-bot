@@ -1,6 +1,6 @@
 import asyncio
 import random
-from datetime import datetime, timedelta
+from datetime import datetime
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
@@ -9,60 +9,624 @@ from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, InlineKe
 TOKEN = "8949697674:AAHAZywQYpmpYzx4BE2LJY1JiGC76WxWRx4"
 
 # ========== АДМИНЫ ==========
-MASTER_ADMIN_ID = 6900319945      # ТЫ — полный доступ
-ADMIN_IDS = [6900319945]          # Список админов (добавляй через запятую)
+ADMIN_IDS = [6900319945]  # Твой ID
 POLINA_ID = 8428411159
 
-# ========== ГЕНЕРАЦИЯ ПИТОМЦЕВ ==========
+# ========== ГЕНЕРАЦИЯ 100+ ПИТОМЦЕВ ==========
 PET_NAMES = [
     "Курица", "Крокодил", "Хомяк", "Дракон", "Кот", "Пёс", "Лиса", "Волк", "Медведь", "Панда",
     "Тигр", "Лев", "Слон", "Жираф", "Зебра", "Обезьяна", "Кенгуру", "Коала", "Пингвин", "Фламинго",
-    "Сова", "Орёл", "Сокол", "Попугай", "Единорог", "Феникс", "Грифон", "Цербер", "Пегас", "Дракон"
+    "Сова", "Орёл", "Сокол", "Попугай", "Воробей", "Голубь", "Лебедь", "Утка", "Гусь", "Цыплёнок",
+    "Ёж", "Белка", "Заяц", "Лось", "Олень", "Кабан", "Бобр", "Выдра", "Норка", "Соболь",
+    "Дельфин", "Кит", "Акула", "Осьминог", "Медуза", "Краб", "Лобстер", "Креветка", "Рыба-клоун", "Скат",
+    "Хамелеон", "Ящерица", "Змея", "Черепаха", "Лягушка", "Жаба", "Тритон", "Саламандра", "Геккон", "Игуана",
+    "Единорог", "Феникс", "Грифон", "Цербер", "Пегас", "Кракен", "Василиск", "Химера", "Сфинкс", "Циклоп"
 ]
 
-PRICES = [50, 80, 100, 120, 150, 180, 200, 250, 300, 400, 500, 600, 800, 1000, 1500, 2000]
-emoji_list = ["🐔", "🐊", "🐹", "🐉", "🐱", "🐶", "🦊", "🐺", "🐻", "🐼", "🐯", "🦁", "🐘", "🦒", "🦓", "🐒", "🦘", "🐨", "🐧", "🦩", "🦉", "🦅", "🦜", "🐦", "🦄", "🔥", "🦅", "🔱", "🐴", "🐉"]
+PRICES = [50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 220, 240, 260, 280, 300, 350, 400, 450, 500]
+emoji_list = ["🐔", "🐊", "🐹", "🐉", "🐱", "🐶", "🦊", "🐺", "🐻", "🐼", "🐯", "🦁", "🐘", "🦒", "🦓", "🐒", "🦘", "🐨", "🐧", "🦩", "🦉", "🦅", "🦜", "🐦", "🕊️", "🦢", "🦆", "🐥", "🦔", "🐿️", "🐇", "🦌", "🐗", "🦫", "🐬", "🐋", "🦈", "🐙", "🦀", "🦞", "🦐", "🐠", "🦑", "🦎", "🐍", "🐢", "🦄", "🔥", "🦅", "🔱", "🐴", "🐙"]
 
 PETS = {}
 for i, name in enumerate(PET_NAMES):
     emoji = emoji_list[i % len(emoji_list)]
-    if i < 15:
-        rarity = "common"
-    elif i < 25:
-        rarity = "rare"
-    elif i < 28:
-        rarity = "epic"
+    if i < 40:
+        rarity = "⚪ common"
+    elif i < 70:
+        rarity = "🔵 rare"
+    elif i < 90:
+        rarity = "🟣 epic"
     else:
-        rarity = "legendary"
+        rarity = "🟠 legendary"
     price = PRICES[i % len(PRICES)]
-    PETS[f"pet_{i}"] = {"name": f"{emoji} {name}", "price": price, "emoji": emoji, "rarity": rarity, "power": random.randint(10, 100)}
-
-# ========== ИГРЫ ==========
-GAMES = {
-    "coin": {"name": "🎲 Орёл/Решка", "bet": 10, "min_win": 10, "max_win": 10},
-    "number": {"name": "🔢 Угадай число", "bet": 5, "min_win": 5, "max_win": 25},
-    "dice": {"name": "🎲 Кости", "bet": 20, "min_win": 20, "max_win": 60},
-    "rps": {"name": "✊ КНБ", "bet": 15, "min_win": 15, "max_win": 30},
-    "higher": {"name": "⬆️ Выше-Ниже", "bet": 25, "min_win": 25, "max_win": 75},
-    "slots": {"name": "🎰 Слоты", "bet": 30, "min_win": 30, "max_win": 150},
-    "blackjack": {"name": "🃏 Блэкджек", "bet": 50, "min_win": 50, "max_win": 200}
-}
-
-# ========== КЛАНЫ ==========
-clans = {}
-
-def create_clan(owner_id, name):
-    clans[name] = {
-        "owner": owner_id,
-        "members": [owner_id],
-        "level": 1,
-        "exp": 0,
-        "balance": 0,
-        "created": datetime.now().isoformat()
+    PETS[f"pet_{i}"] = {
+        "name": f"{emoji} {name}",
+        "price": price,
+        "emoji": emoji,
+        "rarity": rarity
     }
-    return clans[name]
+
+# ========== ИГРЫ (15 ШТУК) ==========
+async def game_coin(user_id, choice):
+    user = get_user(user_id)
+    if user["dubli"] < 10:
+        return False, "❌ Не хватает 10 дублей!"
+    result = random.choice(["Орел", "Решка"])
+    win = choice == result
+    if win:
+        user["dubli"] += 10
+        user["stats"]["wins"] += 1
+        msg = f"🎉 {result}! +10 дублей!"
+    else:
+        user["dubli"] -= 10
+        user["stats"]["losses"] += 1
+        msg = f"😔 {result}! -10 дублей!"
+    user["stats"]["games"] += 1
+    return win, f"{msg}\n💰 {user['dubli']}💎"
+
+async def game_number(user_id, number):
+    user = get_user(user_id)
+    if user["dubli"] < 5:
+        return False, "❌ Не хватает 5 дублей!"
+    secret = random.randint(1, 10)
+    win = number == secret
+    if win:
+        reward = random.randint(5, 25)
+        user["dubli"] += reward
+        user["stats"]["wins"] += 1
+        msg = f"🎉 Число {secret}! +{reward} дублей!"
+    else:
+        user["dubli"] -= 5
+        user["stats"]["losses"] += 1
+        msg = f"😔 Число {secret}, ты назвал {number}. -5 дублей!"
+    user["stats"]["games"] += 1
+    return win, f"{msg}\n💰 {user['dubli']}💎"
+
+async def game_dice(user_id):
+    user = get_user(user_id)
+    if user["dubli"] < 20:
+        return False, "❌ Не хватает 20 дублей!"
+    player = random.randint(1, 6)
+    bot = random.randint(1, 6)
+    if player > bot:
+        reward = random.randint(20, 60)
+        user["dubli"] += reward
+        user["stats"]["wins"] += 1
+        msg = f"🎉 {player} vs {bot} +{reward}💎"
+    elif player < bot:
+        user["dubli"] -= 20
+        user["stats"]["losses"] += 1
+        msg = f"😔 {player} vs {bot} -20💎"
+    else:
+        msg = f"🤝 Ничья! {player}-{bot}"
+    user["stats"]["games"] += 1
+    return True, f"{msg}\n💰 {user['dubli']}💎"
+
+async def game_rps(user_id, choice):
+    user = get_user(user_id)
+    if user["dubli"] < 15:
+        return False, "❌ Не хватает 15 дублей!"
+    choices = ["камень", "ножницы", "бумага"]
+    bot = random.choice(choices)
+    if choice == bot:
+        msg = f"🤝 Ничья! {choice} - {bot}"
+        return True, msg
+    elif (choice == "камень" and bot == "ножницы") or (choice == "ножницы" and bot == "бумага") or (choice == "бумага" and bot == "камень"):
+        user["dubli"] += 15
+        user["stats"]["wins"] += 1
+        msg = f"🎉 {choice} vs {bot} +15💎"
+    else:
+        user["dubli"] -= 15
+        user["stats"]["losses"] += 1
+        msg = f"😔 {choice} vs {bot} -15💎"
+    user["stats"]["games"] += 1
+    return True, f"{msg}\n💰 {user['dubli']}💎"
+
+async def game_higher(user_id, guess):
+    user = get_user(user_id)
+    if user["dubli"] < 25:
+        return False, "❌ Не хватает 25 дублей!"
+    num = random.randint(1, 100)
+    next_num = random.randint(1, 100)
+    win = (guess == "higher" and next_num > num) or (guess == "lower" and next_num < num)
+    if win:
+        reward = random.randint(25, 75)
+        user["dubli"] += reward
+        user["stats"]["wins"] += 1
+        msg = f"🎉 {num} → {next_num} +{reward}💎"
+    else:
+        user["dubli"] -= 25
+        user["stats"]["losses"] += 1
+        msg = f"😔 {num} → {next_num} -25💎"
+    user["stats"]["games"] += 1
+    return win, f"{msg}\n💰 {user['dubli']}💎"
+
+async def game_slots(user_id):
+    user = get_user(user_id)
+    if user["dubli"] < 30:
+        return False, "❌ Не хватает 30 дублей!"
+    slots = ["🍒", "🍋", "🍊", "🍉", "⭐", "💎"]
+    result = [random.choice(slots) for _ in range(3)]
+    if result[0] == result[1] == result[2]:
+        reward = 150
+        user["dubli"] += reward
+        msg = f"🎰 ДЖЕКПОТ! {result[0]}{result[1]}{result[2]} +150💎"
+    elif result[0] == result[1] or result[1] == result[2]:
+        reward = 60
+        user["dubli"] += reward
+        msg = f"🎰 Пара! {result[0]}{result[1]}{result[2]} +60💎"
+    else:
+        user["dubli"] -= 30
+        msg = f"😔 {result[0]}{result[1]}{result[2]} -30💎"
+    user["stats"]["games"] += 1
+    return True, f"{msg}\n💰 {user['dubli']}💎"
+
+async def game_blackjack(user_id):
+    user = get_user(user_id)
+    if user["dubli"] < 50:
+        return False, "❌ Не хватает 50 дублей!"
+    player = random.randint(10, 21)
+    bot = random.randint(10, 21)
+    if player > bot:
+        reward = random.randint(50, 200)
+        user["dubli"] += reward
+        user["stats"]["wins"] += 1
+        msg = f"🎉 {player} vs {bot} +{reward}💎"
+    else:
+        user["dubli"] -= 50
+        user["stats"]["losses"] += 1
+        msg = f"😔 {player} vs {bot} -50💎"
+    user["stats"]["games"] += 1
+    return True, f"{msg}\n💰 {user['dubli']}💎"
+
+async def game_roulette(user_id):
+    user = get_user(user_id)
+    if user["dubli"] < 40:
+        return False, "❌ Не хватает 40 дублей!"
+    number = random.randint(0, 36)
+    color = "красное" if number % 2 == 0 else "чёрное"
+    win = random.choice([True, False])
+    if win:
+        reward = random.randint(40, 120)
+        user["dubli"] += reward
+        user["stats"]["wins"] += 1
+        msg = f"🎡 Выпало {number} ({color})! +{reward}💎"
+    else:
+        user["dubli"] -= 40
+        user["stats"]["losses"] += 1
+        msg = f"😔 Выпало {number} ({color})! -40💎"
+    user["stats"]["games"] += 1
+    return win, f"{msg}\n💰 {user['dubli']}💎"
+
+async def game_race(user_id):
+    user = get_user(user_id)
+    if user["dubli"] < 35:
+        return False, "❌ Не хватает 35 дублей!"
+    horses = ["🐎 Вороной", "🐎 Белый", "🐎 Рыжий", "🐎 Гнедой"]
+    player = random.choice(horses)
+    winner = random.choice(horses)
+    if player == winner:
+        reward = random.randint(35, 100)
+        user["dubli"] += reward
+        user["stats"]["wins"] += 1
+        msg = f"🏆 Твоя лошадь {player} победила! +{reward}💎"
+    else:
+        user["dubli"] -= 35
+        user["stats"]["losses"] += 1
+        msg = f"😔 Победил {winner}, а ты ставил на {player}. -35💎"
+    user["stats"]["games"] += 1
+    return True, f"{msg}\n💰 {user['dubli']}💎"
+
+async def game_safe(user_id):
+    user = get_user(user_id)
+    if user["dubli"] < 45:
+        return False, "❌ Не хватает 45 дублей!"
+    code = random.randint(100, 999)
+    guess = random.randint(100, 999)
+    if abs(code - guess) < 50:
+        reward = random.randint(45, 150)
+        user["dubli"] += reward
+        msg = f"🔐 Код {code}, ты ввёл {guess}! +{reward}💎"
+    else:
+        user["dubli"] -= 45
+        msg = f"😔 Код {code}, ты ввёл {guess}! -45💎"
+    user["stats"]["games"] += 1
+    return True, f"{msg}\n💰 {user['dubli']}💎"
+
+async def game_darts(user_id):
+    user = get_user(user_id)
+    if user["dubli"] < 25:
+        return False, "❌ Не хватает 25 дублей!"
+    score = random.randint(1, 10)
+    if score >= 8:
+        reward = random.randint(25, 80)
+        user["dubli"] += reward
+        msg = f"🎯 Ты попал в {score} очков! +{reward}💎"
+    else:
+        user["dubli"] -= 25
+        msg = f"😔 Ты попал в {score} очков! -25💎"
+    user["stats"]["games"] += 1
+    return True, f"{msg}\n💰 {user['dubli']}💎"
+
+async def game_duel(user_id):
+    user = get_user(user_id)
+    if user["dubli"] < 30:
+        return False, "❌ Не хватает 30 дублей!"
+    player = random.randint(1, 10)
+    bot = random.randint(1, 10)
+    if player > bot:
+        reward = random.randint(30, 90)
+        user["dubli"] += reward
+        msg = f"⚔️ Ты нанёс {player} урона, враг {bot}. +{reward}💎"
+    else:
+        user["dubli"] -= 30
+        msg = f"😔 Ты нанёс {player} урона, враг {bot}. -30💎"
+    user["stats"]["games"] += 1
+    return True, f"{msg}\n💰 {user['dubli']}💎"
+
+async def game_fishing(user_id):
+    user = get_user(user_id)
+    if user["dubli"] < 20:
+        return False, "❌ Не хватает 20 дублей!"
+    fish = random.choice(["🐟 маленькую", "🐠 среднюю", "🐡 большую", "🦈 акулу!"])
+    if fish == "🦈 акулу!":
+        reward = random.randint(20, 80)
+        user["dubli"] += reward
+        msg = f"🎣 Ты поймал {fish} +{reward}💎"
+    else:
+        user["dubli"] -= 20
+        msg = f"😔 Ты поймал {fish} -20💎"
+    user["stats"]["games"] += 1
+    return True, f"{msg}\n💰 {user['dubli']}💎"
+
+async def game_clover(user_id):
+    user = get_user(user_id)
+    if user["dubli"] < 15:
+        return False, "❌ Не хватает 15 дублей!"
+    luck = random.randint(1, 100)
+    if luck > 70:
+        reward = random.randint(15, 60)
+        user["dubli"] += reward
+        msg = f"🍀 Тебе повезло! +{reward}💎"
+    else:
+        user["dubli"] -= 15
+        msg = f"😔 Сегодня не твой день... -15💎"
+    user["stats"]["games"] += 1
+    return True, f"{msg}\n💰 {user['dubli']}💎"
+
+async def game_crystals(user_id):
+    user = get_user(user_id)
+    if user["dubli"] < 50:
+        return False, "❌ Не хватает 50 дублей!"
+    crystals = random.randint(1, 100)
+    if crystals > 80:
+        reward = random.randint(50, 200)
+        user["dubli"] += reward
+        msg = f"💎 Ты нашёл {crystals} кристаллов! +{reward}💎"
+    else:
+        user["dubli"] -= 50
+        msg = f"😔 Ты нашёл {crystals} кристаллов... -50💎"
+    user["stats"]["games"] += 1
+    return True, f"{msg}\n💰 {user['dubli']}💎"
 
 # ========== БАЗА ДАННЫХ ==========
+users = {}
+
+def get_user(user_id):
+    if user_id not in users:
+        users[user_id] = {
+            "dubli": 500,
+            "pets": ["kurochka"],
+            "last_daily": None,
+            "stats": {"games": 0, "wins": 0, "losses": 0}
+        }
+    return users[user_id]
+
+# ========== КЛАВИАТУРЫ ==========
+def main_kb():
+    kb = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="🐾 Мои питомцы"), KeyboardButton(text="🏪 Магазин")],
+            [KeyboardButton(text="🎮 Игры"), KeyboardButton(text="🎁 Бонус")],
+            [KeyboardButton(text="💰 Дубли"), KeyboardButton(text="🏆 Топ")],
+            [KeyboardButton(text="👑 Админка")]
+        ],
+        resize_keyboard=True
+    )
+    return kb
+
+def games_kb():
+    kb = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="🎲 Орёл/Решка"), KeyboardButton(text="🔢 Угадай число")],
+            [KeyboardButton(text="🎲 Кости"), KeyboardButton(text="✊ КНБ")],
+            [KeyboardButton(text="⬆️ Выше-Ниже"), KeyboardButton(text="🎰 Слоты")],
+            [KeyboardButton(text="🃏 Блэкджек"), KeyboardButton(text="🎡 Рулетка")],
+            [KeyboardButton(text="🐎 Гонки"), KeyboardButton(text="🔐 Сейф")],
+            [KeyboardButton(text="🎯 Дартс"), KeyboardButton(text="⚔️ Дуэль")],
+            [KeyboardButton(text="🎣 Рыбалка"), KeyboardButton(text="🍀 Клевер")],
+            [KeyboardButton(text="💎 Кристаллы"), KeyboardButton(text="◀️ Назад")]
+        ],
+        resize_keyboard=True
+    )
+    return kb
+
+def admin_kb():
+    kb = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="💰 Выдать дубли"), KeyboardButton(text="📢 Объявление")],
+            [KeyboardButton(text="📊 Статистика"), KeyboardButton(text="◀️ Назад")]
+        ],
+        resize_keyboard=True
+    )
+    return kb
+
+def back_kb():
+    return ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="◀️ Назад")]], resize_keyboard=True)
+
+# ========== БОТ ==========
+bot = Bot(token=TOKEN)
+dp = Dispatcher()
+
+@dp.message(Command("start"))
+async def start_cmd(message: Message):
+    user_id = message.from_user.id
+    get_user(user_id)
+    
+    if user_id == POLINA_ID:
+        await message.answer("🌸 **ПОЛЯШКА САМАЯ КРУТАЯ!** 🌸\n\n✨ Ты зашла в свой личный бот! ✨", reply_markup=main_kb())
+    else:
+        await message.answer("🎮 **Добро пожаловать в бот!** 🎮\n\nИграй, покупай питомцев, становись лучшим!", reply_markup=main_kb())
+
+@dp.message()
+async def handle_message(message: Message):
+    user_id = message.from_user.id
+    user = get_user(user_id)
+    text = message.text
+    
+    # ========== НАЗАД ==========
+    if text == "◀️ Назад":
+        await message.answer("Главное меню:", reply_markup=main_kb())
+        return
+    
+    # ========== АДМИНКА ==========
+    if text == "👑 Админка" and user_id in ADMIN_IDS:
+        await message.answer("👑 **АДМИН-ПАНЕЛЬ** 👑", reply_markup=admin_kb())
+        return
+    
+    # ========== ИГРЫ ==========
+    if text == "🎮 Игры":
+        await message.answer("🎮 **Выбери игру:**\n\nСтавки от 5 до 50💎\nУдачи! 🍀", reply_markup=games_kb())
+        return
+    
+    # Обработка игр
+    if text == "🎲 Орёл/Решка":
+        kb = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="Орел"), KeyboardButton(text="Решка")], [KeyboardButton(text="◀️ Назад")]], resize_keyboard=True)
+        await message.answer("Выбери:", reply_markup=kb)
+        return
+    
+    if text in ["Орел", "Решка"]:
+        win, msg = await game_coin(user_id, text)
+        await message.answer(msg, reply_markup=games_kb())
+        return
+    
+    if text == "🔢 Угадай число":
+        await message.answer("Введи число от 1 до 10:", reply_markup=back_kb())
+        user["awaiting_number"] = True
+        return
+    
+    if user.get("awaiting_number") and text.isdigit() and 1 <= int(text) <= 10:
+        user["awaiting_number"] = False
+        win, msg = await game_number(user_id, int(text))
+        await message.answer(msg, reply_markup=games_kb())
+        return
+    
+    if text == "🎲 Кости":
+        win, msg = await game_dice(user_id)
+        await message.answer(msg, reply_markup=games_kb())
+        return
+    
+    if text == "✊ КНБ":
+        kb = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="камень"), KeyboardButton(text="ножницы"), KeyboardButton(text="бумага")], [KeyboardButton(text="◀️ Назад")]], resize_keyboard=True)
+        await message.answer("Выбери:", reply_markup=kb)
+        return
+    
+    if text in ["камень", "ножницы", "бумага"]:
+        win, msg = await game_rps(user_id, text)
+        await message.answer(msg, reply_markup=games_kb())
+        return
+    
+    if text == "⬆️ Выше-Ниже":
+        kb = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="higher"), KeyboardButton(text="lower")], [KeyboardButton(text="◀️ Назад")]], resize_keyboard=True)
+        await message.answer("Следующее число будет выше (higher) или ниже (lower)?", reply_markup=kb)
+        return
+    
+    if text in ["higher", "lower"]:
+        win, msg = await game_higher(user_id, text)
+        await message.answer(msg, reply_markup=games_kb())
+        return
+    
+    if text == "🎰 Слоты":
+        win, msg = await game_slots(user_id)
+        await message.answer(msg, reply_markup=games_kb())
+        return
+    
+    if text == "🃏 Блэкджек":
+        win, msg = await game_blackjack(user_id)
+        await message.answer(msg, reply_markup=games_kb())
+        return
+    
+    if text == "🎡 Рулетка":
+        win, msg = await game_roulette(user_id)
+        await message.answer(msg, reply_markup=games_kb())
+        return
+    
+    if text == "🐎 Гонки":
+        win, msg = await game_race(user_id)
+        await message.answer(msg, reply_markup=games_kb())
+        return
+    
+    if text == "🔐 Сейф":
+        win, msg = await game_safe(user_id)
+        await message.answer(msg, reply_markup=games_kb())
+        return
+    
+    if text == "🎯 Дартс":
+        win, msg = await game_darts(user_id)
+        await message.answer(msg, reply_markup=games_kb())
+        return
+    
+    if text == "⚔️ Дуэль":
+        win, msg = await game_duel(user_id)
+        await message.answer(msg, reply_markup=games_kb())
+        return
+    
+    if text == "🎣 Рыбалка":
+        win, msg = await game_fishing(user_id)
+        await message.answer(msg, reply_markup=games_kb())
+        return
+    
+    if text == "🍀 Клевер":
+        win, msg = await game_clover(user_id)
+        await message.answer(msg, reply_markup=games_kb())
+        return
+    
+    if text == "💎 Кристаллы":
+        win, msg = await game_crystals(user_id)
+        await message.answer(msg, reply_markup=games_kb())
+        return
+    
+    # ========== МАГАЗИН ==========
+    if text == "🏪 Магазин":
+        # Создаём клавиатуру с питомцами
+        kb = InlineKeyboardMarkup(inline_keyboard=[])
+        count = 0
+        for pet_id, pet in PETS.items():
+            if count >= 24:
+                break
+            kb.inline_keyboard.append([InlineKeyboardButton(text=f"{pet['name']} — {pet['price']}💎", callback_data=f"buy_{pet_id}")])
+            count += 1
+        kb.inline_keyboard.append([InlineKeyboardButton(text="❌ Закрыть", callback_data="close")])
+        
+        await message.answer(f"🏪 **Магазин питомцев** 🏪\n\nВсего питомцев: {len(PETS)}\n\nВыбери питомца кнопкой:", reply_markup=kb)
+        return
+    
+    if text == "🐾 Мои питомцы":
+        if len(user["pets"]) == 0:
+            await message.answer("🐾 У тебя пока нет питомцев! Купи в магазине /shop", reply_markup=main_kb())
+        else:
+            pets_list = "\n".join([f"{i+1}. {PETS[p]['name']}" for i, p in enumerate(user["pets"][:30])])
+            await message.answer(f"🐾 **Твои питомцы** ({len(user['pets'])}):\n\n{pets_list}", reply_markup=main_kb())
+        return
+    
+    # ========== БОНУС ==========
+    if text == "🎁 Бонус":
+        today = datetime.now().date().isoformat()
+        if user.get("last_daily") == today:
+            await message.answer("🎁 Ты уже получал бонус сегодня! Завтра приходи!", reply_markup=main_kb())
+        else:
+            bonus = random.randint(50, 200)
+            user["dubli"] += bonus
+            user["last_daily"] = today
+            await message.answer(f"🎁 **Ежедневный бонус!** +{bonus} дублей! 💰\nТеперь у тебя {user['dubli']}💎", reply_markup=main_kb())
+        return
+    
+    # ========== ДУБЛИ ==========
+    if text == "💰 Дубли":
+        await message.answer(f"💰 **Твой баланс:** {user['dubli']} дублей!\n\n📊 **Статистика:**\n🎮 Игр: {user['stats']['games']}\n🏆 Побед: {user['stats']['wins']}\n💔 Поражений: {user['stats']['losses']}", reply_markup=main_kb())
+        return
+    
+    # ========== ТОП ==========
+    if text == "🏆 Топ":
+        players = []
+        for uid, data in users.items():
+            try:
+                chat = await bot.get_chat(uid)
+                name = chat.username or chat.first_name or str(uid)
+            except:
+                name = str(uid)
+            players.append((name, data["dubli"], len(data["pets"]), data["stats"]["games"]))
+        players.sort(key=lambda x: x[1], reverse=True)
+        
+        top_text = "🏆 **ТОП ИГРОКОВ** 🏆\n\n"
+        for i, (name, dubli, pets, games) in enumerate(players[:15], 1):
+            medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}."
+            top_text += f"{medal} {name[:20]} — {dubli}💎 ({pets} петов)\n"
+        await message.answer(top_text, reply_markup=main_kb())
+        return
+    
+    # ========== АДМИН-КОМАНДЫ ==========
+    if text == "💰 Выдать дубли" and user_id in ADMIN_IDS:
+        await message.answer("Введи: `/add ID КОЛИЧЕСТВО`\nПример: /add 6900319945 500", parse_mode="Markdown", reply_markup=admin_kb())
+        return
+    
+    if text == "📢 Объявление" and user_id in ADMIN_IDS:
+        await message.answer("Введи текст объявления:", reply_markup=admin_kb())
+        user["awaiting_broadcast"] = True
+        return
+    
+    if user.get("awaiting_broadcast"):
+        count = 0
+        for uid in users:
+            try:
+                await bot.send_message(uid, f"📢 **ОБЪЯВЛЕНИЕ ОТ АДМИНА** 📢\n\n{text}")
+                count += 1
+                await asyncio.sleep(0.05)
+            except:
+                pass
+        user["awaiting_broadcast"] = False
+        await message.answer(f"✅ Объявление отправлено {count} игрокам!", reply_markup=admin_kb())
+        return
+    
+    if text == "📊 Статистика" and user_id in ADMIN_IDS:
+        total_players = len(users)
+        total_dubli = sum(u["dubli"] for u in users.values())
+        total_pets = sum(len(u["pets"]) for u in users.values())
+        total_games = sum(u["stats"]["games"] for u in users.values())
+        await message.answer(
+            f"📊 **СТАТИСТИКА БОТА** 📊\n\n"
+            f"👥 Игроков: {total_players}\n"
+            f"💰 Дублей в обороте: {total_dubli}\n"
+            f"🐾 Всего питомцев: {total_pets}\n"
+            f"🎮 Сыграно игр: {total_games}",
+            reply_markup=admin_kb()
+        )
+        return
+
+@dp.callback_query()
+async def handle_callback(call: CallbackQuery):
+    user_id = call.from_user.id
+    user = get_user(user_id)
+    data = call.data
+    
+    if data.startswith("buy_"):
+        pet_id = data.replace("buy_", "")
+        pet = PETS.get(pet_id)
+        
+        if not pet:
+            await call.answer("❌ Питомец не найден!")
+            return
+        
+        if user["dubli"] >= pet["price"]:
+            user["dubli"] -= pet["price"]
+            user["pets"].append(pet_id)
+            await call.message.edit_text(f"✅ Ты купил {pet['name']}! 💖\nОсталось: {user['dubli']}💎")
+            await call.answer(f"Куплен {pet['name']}!")
+        else:
+            await call.answer(f"❌ Не хватает! Нужно {pet['price']}💎", show_alert=True)
+    
+    elif data == "close":
+        await call.message.delete()
+
+@dp.message(Command("add"))
+async def add_dubli(message: Message):
+    user_id = message.from_user.id
+    if user_id not in ADMIN_IDS:
+        await message.answer("❌ Нет доступа!")
+        return
+    
+    args = message.text.split()
+    if len(args) < 3:
+        await message.answer("❌ Использование: /add ID КОЛИЧЕСТВО# ========== БАЗА ДАННЫХ ==========
 users = {}
 
 def get_user(user_id):
