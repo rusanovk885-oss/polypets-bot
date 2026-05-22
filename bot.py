@@ -5,7 +5,7 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 
-# ========== ТОКЕН ПРЯМО В КОДЕ ==========
+# ========== ТОКЕН (ВСТАВЛЕН ТВОЙ) ==========
 TOKEN = "8085068905:AAE1CeeFPTGc94jEaFgUVP7tUO9famyzKZ4"
 
 # ========== ID ==========
@@ -21,7 +21,13 @@ PETS = {
     "cat": {"name": "🐱 Кот", "price": 150, "income": 7, "emoji": "🐱"}
 }
 
-# ========== БАЗА ДАННЫХ ==========
+FOOD = {
+    "seed": {"name": "🌽 Зерно", "price": 5, "restore": 15, "emoji": "🌽"},
+    "meat": {"name": "🍖 Мясо", "price": 15, "restore": 35, "emoji": "🍖"},
+    "candy": {"name": "🍭 Конфета", "price": 8, "restore": 20, "emoji": "🍭"},
+    "cake": {"name": "🍰 Торт", "price": 25, "restore": 50, "emoji": "🍰"}
+}
+
 users = {}
 
 def get_user(user_id):
@@ -35,7 +41,6 @@ def get_user(user_id):
         }
     return users[user_id]
 
-# ========== КЛАВИАТУРЫ ==========
 def main_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🐾 Мои питомцы", callback_data="my_pets")],
@@ -59,13 +64,6 @@ def pet_shop_kb():
     kb.inline_keyboard.append([InlineKeyboardButton(text="◀️ Назад", callback_data="shop_menu")])
     return kb
 
-def games_menu_kb():
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🎲 Орёл/Решка (10💎)", callback_data="game_coin")],
-        [InlineKeyboardButton(text="🔢 Угадай число (5💎)", callback_data="game_number")],
-        [InlineKeyboardButton(text="◀️ Назад", callback_data="back_main")]
-    ])
-
 def food_shop_kb(user):
     kb = InlineKeyboardMarkup(inline_keyboard=[])
     for food_id, food in FOOD.items():
@@ -74,23 +72,12 @@ def food_shop_kb(user):
     kb.inline_keyboard.append([InlineKeyboardButton(text="◀️ Назад", callback_data="shop_menu")])
     return kb
 
-def feed_menu_kb(user):
-    kb = InlineKeyboardMarkup(inline_keyboard=[])
-    active = user["active_pet"]
-    for pet_id in user["pets"]:
-        pet = PETS[pet_id]
-        marker = "✅" if pet_id == active else "🔘"
-        kb.inline_keyboard.append([InlineKeyboardButton(text=f"{marker} {pet['emoji']} {pet['name']}", callback_data=f"switch_pet_{pet_id}")])
-    kb.inline_keyboard.append([InlineKeyboardButton(text="🍽️ Покормить", callback_data="do_feed")])
-    kb.inline_keyboard.append([InlineKeyboardButton(text="◀️ Назад", callback_data="back_main")])
-    return kb
-
-FOOD = {
-    "seed": {"name": "🌽 Зерно", "price": 5, "restore": 15, "emoji": "🌽"},
-    "meat": {"name": "🍖 Мясо", "price": 15, "restore": 35, "emoji": "🍖"},
-    "candy": {"name": "🍭 Конфета", "price": 8, "restore": 20, "emoji": "🍭"},
-    "cake": {"name": "🍰 Торт", "price": 25, "restore": 50, "emoji": "🍰"}
-}
+def games_menu_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🎲 Орёл/Решка (10💎)", callback_data="game_coin")],
+        [InlineKeyboardButton(text="🔢 Угадай число (5-25💎)", callback_data="game_number")],
+        [InlineKeyboardButton(text="◀️ Назад", callback_data="back_main")]
+    ])
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
@@ -155,7 +142,7 @@ async def handle_callback(call: CallbackQuery):
             await call.answer("Не хватает дублей")
     
     elif data == "games_menu":
-        await call.message.edit_text("🎮 Игры:", reply_markup=games_menu_kb())
+        await call.message.edit_text("🎮 Выбери игру:", reply_markup=games_menu_kb())
     
     elif data == "game_coin":
         if user["dubli"] < 10:
@@ -165,10 +152,10 @@ async def handle_callback(call: CallbackQuery):
         user_choice = random.choice(["орел", "решка"])
         if result == user_choice:
             user["dubli"] += 10
-            msg = f"🎉 {result}! +10 дублей"
+            msg = f"🎉 {result}! Выиграл +10 дублей"
         else:
             user["dubli"] -= 10
-            msg = f"😔 {result}! -10 дублей"
+            msg = f"😔 {result}! Проиграл -10 дублей"
         await call.answer(msg)
         await call.message.edit_text(f"{msg}\n💰 {user['dubli']}💎", reply_markup=games_menu_kb())
     
@@ -181,10 +168,10 @@ async def handle_callback(call: CallbackQuery):
         if number == user_num:
             reward = random.randint(5, 25)
             user["dubli"] += reward
-            msg = f"🔢 Число {number}! +{reward} дублей"
+            msg = f"🔢 Число {number}! Угадал! +{reward} дублей"
         else:
             user["dubli"] -= 5
-            msg = f"🔢 Число {number}, ты {user_num}. -5 дублей"
+            msg = f"🔢 Число {number}, ты назвал {user_num}. -5 дублей"
         await call.answer(msg)
         await call.message.edit_text(f"{msg}\n💰 {user['dubli']}💎", reply_markup=games_menu_kb())
     
