@@ -1,81 +1,45 @@
 import asyncio
 import random
-import json
 from datetime import datetime
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 
+# ========== ТОКЕН ПРЯМО В КОДЕ ==========
 TOKEN = "8085068905:AAE1ceefPTGc94jEaFgUVP7tUO9famyzKZ4"
+
+# ========== ID ==========
 MASTER_ADMIN_ID = 6900319945
 POLINA_ID = 8428411159
-DATA_FILE = "poly_bot_data.json"
 
+# ========== ПИТОМЦЫ ==========
 PETS = {
-    "kurochka": {"name": "🐔 Курица", "price": 50, "income": 2, "max_hunger": 100, "emoji": "🐔"},
-    "krokodil": {"name": "🐊 Крокодил", "price": 120, "income": 5, "max_hunger": 80, "emoji": "🐊"},
-    "hamster": {"name": "🐹 Хомяк", "price": 80, "income": 3, "max_hunger": 90, "emoji": "🐹"},
-    "drakosha": {"name": "🐉 Дракон", "price": 200, "income": 10, "max_hunger": 120, "emoji": "🐉"},
-    "cat": {"name": "🐱 Кот", "price": 150, "income": 7, "max_hunger": 85, "emoji": "🐱"}
+    "kurochka": {"name": "🐔 Курица", "price": 50, "income": 2, "emoji": "🐔"},
+    "krokodil": {"name": "🐊 Крокодил", "price": 120, "income": 5, "emoji": "🐊"},
+    "hamster": {"name": "🐹 Хомяк", "price": 80, "income": 3, "emoji": "🐹"},
+    "drakosha": {"name": "🐉 Дракон", "price": 200, "income": 10, "emoji": "🐉"},
+    "cat": {"name": "🐱 Кот", "price": 150, "income": 7, "emoji": "🐱"}
 }
 
-FOOD = {
-    "seed": {"name": "🌽 Зерно", "price": 5, "restore": 15, "emoji": "🌽"},
-    "meat": {"name": "🍖 Мясо", "price": 15, "restore": 35, "emoji": "🍖"},
-    "candy": {"name": "🍭 Конфета", "price": 8, "restore": 20, "emoji": "🍭"},
-    "cake": {"name": "🍰 Торт", "price": 25, "restore": 50, "emoji": "🍰"}
-}
-
-def load_data():
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {}
-
-def save_data(data):
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
-users_db = load_data()
+# ========== БАЗА ДАННЫХ ==========
+users = {}
 
 def get_user(user_id):
-    uid = str(user_id)
-    if uid not in users_db:
-        users_db[uid] = {
+    if user_id not in users:
+        users[user_id] = {
             "dubli": 150,
             "pets": ["kurochka"],
             "active_pet": "kurochka",
-            "hunger": {"kurochka": 100},
             "inventory": {"seed": 3, "meat": 1},
-            "last_daily": None,
-            "username": None
+            "last_daily": None
         }
-        save_data(users_db)
-    return users_db[uid]
+    return users[user_id]
 
-def save_user(user_id, data):
-    users_db[str(user_id)] = data
-    save_data(users_db)
-
-bot = Bot(token=TOKEN)
-dp = Dispatcher()
-
-@dp.message(Command("start"))
-async def start_cmd(message: Message):
-    user_id = message.from_user.id
-    user = get_user(user_id)
-    text = f"🎮 Бот для Поляшки\n\n💰 Дублей: {user['dubli']}\n🐾 Питомцев: {len(user['pets'])}"
-    await message.answer(text, reply_markup=main_kb())
-
-@dp.message(Command("id"))
-async def show_id(message: Message):
-    await message.answer(f"ID: {message.from_user.id}")
-
+# ========== КЛАВИАТУРЫ ==========
 def main_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🐾 Мои питомцы", callback_data="my_pets")],
         [InlineKeyboardButton(text="🏪 Магазин", callback_data="shop_menu")],
-        [InlineKeyboardButton(text="🍗 Покормить", callback_data="feed_menu")],
         [InlineKeyboardButton(text="🎮 Игры", callback_data="games_menu")],
         [InlineKeyboardButton(text="🎁 Бонус", callback_data="daily")],
         [InlineKeyboardButton(text="💎 Дубли", callback_data="my_dublis")]
@@ -102,10 +66,47 @@ def games_menu_kb():
         [InlineKeyboardButton(text="◀️ Назад", callback_data="back_main")]
     ])
 
+def food_shop_kb(user):
+    kb = InlineKeyboardMarkup(inline_keyboard=[])
+    for food_id, food in FOOD.items():
+        count = user["inventory"].get(food_id, 0)
+        kb.inline_keyboard.append([InlineKeyboardButton(text=f"{food['emoji']} {food['name']} — {food['price']}💎 ({count}шт)", callback_data=f"buy_food_{food_id}")])
+    kb.inline_keyboard.append([InlineKeyboardButton(text="◀️ Назад", callback_data="shop_menu")])
+    return kb
+
+def feed_menu_kb(user):
+    kb = InlineKeyboardMarkup(inline_keyboard=[])
+    active = user["active_pet"]
+    for pet_id in user["pets"]:
+        pet = PETS[pet_id]
+        marker = "✅" if pet_id == active else "🔘"
+        kb.inline_keyboard.append([InlineKeyboardButton(text=f"{marker} {pet['emoji']} {pet['name']}", callback_data=f"switch_pet_{pet_id}")])
+    kb.inline_keyboard.append([InlineKeyboardButton(text="🍽️ Покормить", callback_data="do_feed")])
+    kb.inline_keyboard.append([InlineKeyboardButton(text="◀️ Назад", callback_data="back_main")])
+    return kb
+
+FOOD = {
+    "seed": {"name": "🌽 Зерно", "price": 5, "restore": 15, "emoji": "🌽"},
+    "meat": {"name": "🍖 Мясо", "price": 15, "restore": 35, "emoji": "🍖"},
+    "candy": {"name": "🍭 Конфета", "price": 8, "restore": 20, "emoji": "🍭"},
+    "cake": {"name": "🍰 Торт", "price": 25, "restore": 50, "emoji": "🍰"}
+}
+
+bot = Bot(token=TOKEN)
+dp = Dispatcher()
+
+@dp.message(Command("start"))
+async def start_cmd(message: Message):
+    user = get_user(message.from_user.id)
+    await message.answer(f"🎮 Бот для Поляшки\n\n💰 Дублей: {user['dubli']}\n🐾 Питомцев: {len(user['pets'])}", reply_markup=main_kb())
+
+@dp.message(Command("id"))
+async def show_id(message: Message):
+    await message.answer(f"Твой ID: {message.from_user.id}")
+
 @dp.callback_query()
 async def handle_callback(call: CallbackQuery):
-    user_id = call.from_user.id
-    user = get_user(user_id)
+    user = get_user(call.from_user.id)
     data = call.data
 
     if data == "back_main":
@@ -117,8 +118,7 @@ async def handle_callback(call: CallbackQuery):
     elif data == "my_pets":
         text = "🐾 Твои питомцы:\n"
         for pet_id in user["pets"]:
-            pet = PETS[pet_id]
-            text += f"{pet['emoji']} {pet['name']}\n"
+            text += f"{PETS[pet_id]['emoji']} {PETS[pet_id]['name']}\n"
         await call.message.edit_text(text, reply_markup=main_kb())
     
     elif data == "shop_menu":
@@ -126,6 +126,9 @@ async def handle_callback(call: CallbackQuery):
     
     elif data == "pet_shop":
         await call.message.edit_text("🐾 Купить питомца:", reply_markup=pet_shop_kb())
+    
+    elif data == "food_shop":
+        await call.message.edit_text("🍗 Купить еду:", reply_markup=food_shop_kb(user))
     
     elif data.startswith("buy_pet_"):
         pet_id = data.split("_")[2]
@@ -135,12 +138,21 @@ async def handle_callback(call: CallbackQuery):
         elif user["dubli"] >= pet["price"]:
             user["dubli"] -= pet["price"]
             user["pets"].append(pet_id)
-            user["hunger"][pet_id] = 100
-            save_user(user_id, user)
             await call.answer(f"Куплен {pet['name']}")
             await call.message.edit_text(f"✅ {pet['name']} куплен!", reply_markup=main_kb())
         else:
             await call.answer(f"Нужно {pet['price']}💎")
+    
+    elif data.startswith("buy_food_"):
+        food_id = data.split("_")[2]
+        food = FOOD[food_id]
+        if user["dubli"] >= food["price"]:
+            user["dubli"] -= food["price"]
+            user["inventory"][food_id] = user["inventory"].get(food_id, 0) + 1
+            await call.answer(f"Куплен {food['name']}")
+            await call.message.edit_text(f"✅ {food['name']} в инвентаре", reply_markup=food_shop_kb(user))
+        else:
+            await call.answer("Не хватает дублей")
     
     elif data == "games_menu":
         await call.message.edit_text("🎮 Игры:", reply_markup=games_menu_kb())
@@ -157,7 +169,6 @@ async def handle_callback(call: CallbackQuery):
         else:
             user["dubli"] -= 10
             msg = f"😔 {result}! -10 дублей"
-        save_user(user_id, user)
         await call.answer(msg)
         await call.message.edit_text(f"{msg}\n💰 {user['dubli']}💎", reply_markup=games_menu_kb())
     
@@ -174,24 +185,24 @@ async def handle_callback(call: CallbackQuery):
         else:
             user["dubli"] -= 5
             msg = f"🔢 Число {number}, ты {user_num}. -5 дублей"
-        save_user(user_id, user)
         await call.answer(msg)
         await call.message.edit_text(f"{msg}\n💰 {user['dubli']}💎", reply_markup=games_menu_kb())
     
     elif data == "daily":
-        last = user.get("last_daily")
         today = datetime.now().date().isoformat()
-        if last == today:
+        if user.get("last_daily") == today:
             await call.answer("Бонус уже получен")
         else:
             bonus = random.randint(30, 80)
             user["dubli"] += bonus
             user["last_daily"] = today
-            save_user(user_id, user)
             await call.answer(f"+{bonus} дублей!")
+            await call.message.edit_text(f"🎁 +{bonus} дублей!\n💰 {user['dubli']}💎", reply_markup=main_kb())
+    
+    await call.answer()
 
 async def main():
-    print("✅ Бот запущен!")
+    print("✅ Бот для Поляшки запущен!")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
