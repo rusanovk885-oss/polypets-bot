@@ -7,7 +7,7 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 
-# ========== ТОКЕН (ВСТАВЬ СВОЙ) ==========
+# ========== ТОКЕН ==========
 TOKEN = "8949697674:AAHAZywQYpmpYzx4BE2LJY1JiGC76WxWRx4"
 
 # ========== АДМИНЫ ==========
@@ -118,6 +118,38 @@ def get_user(user_id):
         save_data(users)
     return users[uid]
 
+# ========== ПОЛУЧИТЬ СПИСОК ИГРОКОВ С ПИТОМЦАМИ ==========
+def get_players_list():
+    players = []
+    for uid, data in users.items():
+        try:
+            # Получаем username из Telegram
+            pass
+        except:
+            pass
+        pets_with_names = []
+        for pet_id in data["pets"]:
+            pet = PETS[pet_id]
+            pet_name = data["pet_names"].get(pet_id, "")
+            if pet_name:
+                pets_with_names.append(f"{pet['name']} (имя: {pet_name})")
+            else:
+                pets_with_names.append(pet['name'])
+        
+        pets_str = ", ".join(pets_with_names[:5])
+        if len(pets_with_names) > 5:
+            pets_str += f" и ещё {len(pets_with_names)-5}"
+        
+        players.append({
+            "id": uid,
+            "dubli": data["dubli"],
+            "pets_count": len(data["pets"]),
+            "pets_names": pets_str
+        })
+    
+    players.sort(key=lambda x: x["dubli"], reverse=True)
+    return players
+
 # ========== ПРОФИЛЬ И ТОПЫ ==========
 async def get_profile_text(user_id, target_id=None):
     if target_id is None:
@@ -202,7 +234,7 @@ def admin_kb():
         keyboard=[
             [KeyboardButton(text="💰 Выдать дубли"), KeyboardButton(text="🎁 Выдать питомца")],
             [KeyboardButton(text="📢 Объявление"), KeyboardButton(text="📊 Статистика")],
-            [KeyboardButton(text="◀️ Назад")]
+            [KeyboardButton(text="👥 Список игроков"), KeyboardButton(text="◀️ Назад")]
         ],
         resize_keyboard=True
     )
@@ -634,7 +666,7 @@ async def pvp(user_id, target_id):
         save_data(users)
         return False, f"💔 Ты проиграл! -30 дублей, рейтинг -5!"
 
-# ========== КОМАНДЫ ==========
+# ========== БОТ ==========
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
@@ -681,18 +713,22 @@ async def handle_message(message: Message):
         await message.answer("Главное меню:", reply_markup=main_kb())
         return
     
+    # ========== АДМИНКА ==========
     if text == "👑 Админка" and user_id == MASTER_ADMIN_ID:
-        await message.answer("👑 АДМИН-ПАНЕЛЬ", reply_markup=admin_kb())
+        await message.answer("👑 **АДМИН-ПАНЕЛЬ** 👑\n\nВыбери действие:", reply_markup=admin_kb())
         return
     
+    # Выдать дубли
     if text == "💰 Выдать дубли" and user_id == MASTER_ADMIN_ID:
-        await message.answer("Введи: /add ID КОЛИЧЕСТВО\nПример: /add 6900319945 500")
+        await message.answer("💰 Введи: /add ID КОЛИЧЕСТВО\nПример: /add 6900319945 500")
         return
     
+    # Выдать питомца
     if text == "🎁 Выдать питомца" and user_id == MASTER_ADMIN_ID:
-        await message.answer("Введи: /give ID НАЗВАНИЕ\nПример: /give 6900319945 Дракон")
+        await message.answer("🎁 Введи: /give ID НАЗВАНИЕ\nПример: /give 6900319945 Дракон")
         return
     
+    # Объявление
     if text == "📢 Объявление" and user_id == MASTER_ADMIN_ID:
         user["awaiting_broadcast"] = True
         await message.answer("📢 Введи текст объявления:")
@@ -702,42 +738,54 @@ async def handle_message(message: Message):
         count = 0
         for uid in users:
             try:
-                await bot.send_message(int(uid), f"📢 **ОБЪЯВЛЕНИЕ** 📢\n\n{text}")
+                await bot.send_message(int(uid), f"📢 **ОБЪЯВЛЕНИЕ ОТ АДМИНА** 📢\n\n{text}")
                 count += 1
                 await asyncio.sleep(0.05)
             except:
                 pass
         user["awaiting_broadcast"] = False
-        await message.answer(f"✅ Отправлено {count} игрокам!")
+        await message.answer(f"✅ Объявление отправлено {count} игрокам!")
         return
     
+    # Статистика
     if text == "📊 Статистика" and user_id == MASTER_ADMIN_ID:
+        total_players = len(users)
+        total_dubli = sum(u["dubli"] for u in users.values())
+        total_pets = sum(len(u["pets"]) for u in users.values())
+        total_games = sum(u["stats"]["games"] for u in users.values())
+        total_chests = sum(u["stats"]["chests"] for u in users.values())
         await message.answer(
-            f"📊 **СТАТИСТИКА** 📊\n\n"
-            f"👥 Игроков: {len(users)}\n"
-            f"💰 Дублей: {sum(u['dubli'] for u in users.values())}\n"
-            f"🐾 Питомцев: {sum(len(u['pets']) for u in users.values())}\n"
-            f"🎮 Игр: {sum(u['stats']['games'] for u in users.values())}\n"
-            f"📦 Сундуков: {sum(u['stats']['chests'] for u in users.values())}",
+            f"📊 **СТАТИСТИКА БОТА** 📊\n\n"
+            f"👥 Игроков: {total_players}\n"
+            f"💰 Дублей в обороте: {total_dubli}\n"
+            f"🐾 Всего питомцев: {total_pets}\n"
+            f"🎮 Сыграно игр: {total_games}\n"
+            f"🎁 Открыто сундуков: {total_chests}",
             reply_markup=admin_kb()
         )
         return
     
-    if text == "👤 Мой профиль":
-        profile_text = await get_profile_text(user_id)
-        await message.answer(profile_text, parse_mode="Markdown", reply_markup=main_kb())
+    # СПИСОК ИГРОКОВ С ПИТОМЦАМИ (АДМИН-КОМАНДА)
+    if text == "👥 Список игроков" and user_id == MASTER_ADMIN_ID:
+        players = get_players_list()
+        if not players:
+            await message.answer("❌ Нет игроков в базе!")
+            return
+        
+        text_msg = "👥 **СПИСОК ИГРОКОВ** 👥\n\n"
+        for p in players[:20]:
+            text_msg += f"🆔 ID: `{p['id']}`\n"
+            text_msg += f"💰 Дублей: {p['dubli']}\n"
+            text_msg += f"🐾 Питомцев: {p['pets_count']}\n"
+            text_msg += f"📋 Имена питомцев: {p['pets_names']}\n\n"
+        
+        if len(players) > 20:
+            text_msg += f"\n... и ещё {len(players) - 20} игроков!"
+        
+        await message.answer(text_msg, parse_mode="Markdown", reply_markup=admin_kb())
         return
     
-    if text == "🏆 Рейтинг":
-        top = await get_top_rating()
-        top_text = "🏆 **ТОП ПО РЕЙТИНГУ PVP** 🏆\n\n"
-        for i, (name, rating, dubli, pets) in enumerate(top, 1):
-            medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}."
-            top_text += f"{medal} {name[:20]} — {rating}⭐ ({dubli}💎, {pets} петов)\n"
-        await message.answer(top_text, reply_markup=main_kb())
-        return
-    
-    # Игры
+    # ========== ОСТАЛЬНЫЕ КОМАНДЫ (ИГРЫ, МАГАЗИН И Т.Д.) ==========
     if text == "🎮 Игры":
         await message.answer("🎮 **Выбери игру:**", reply_markup=games_kb())
         return
@@ -891,7 +939,7 @@ async def handle_message(message: Message):
         )
         return
     
-    # Топ
+    # Топ по дублям
     if text == "🏆 Топ":
         players = []
         for uid, data in users.items():
@@ -902,11 +950,27 @@ async def handle_message(message: Message):
                 name = str(uid)
             players.append((name, data["dubli"], len(data["pets"])))
         players.sort(key=lambda x: x[1], reverse=True)
-        top_text = "🏆 **ТОП ИГРОКОВ** 🏆\n\n"
+        top_text = "🏆 **ТОП ПО ДУБЛЯМ** 🏆\n\n"
         for i, (name, dubli, pets) in enumerate(players[:15], 1):
             medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}."
             top_text += f"{medal} {name[:20]} — {dubli}💎 ({pets} петов)\n"
         await message.answer(top_text, reply_markup=main_kb())
+        return
+    
+    # Топ по рейтингу
+    if text == "🏆 Рейтинг":
+        top = await get_top_rating()
+        top_text = "🏆 **ТОП ПО РЕЙТИНГУ PVP** 🏆\n\n"
+        for i, (name, rating, dubli, pets) in enumerate(top, 1):
+            medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}."
+            top_text += f"{medal} {name[:20]} — {rating}⭐ ({dubli}💎, {pets} петов)\n"
+        await message.answer(top_text, reply_markup=main_kb())
+        return
+    
+    # Мой профиль
+    if text == "👤 Мой профиль":
+        profile_text = await get_profile_text(user_id)
+        await message.answer(profile_text, parse_mode="Markdown", reply_markup=main_kb())
         return
     
     # Сундуки
@@ -935,6 +999,17 @@ async def handle_message(message: Message):
         await message.answer(msg, reply_markup=main_kb())
         return
     
+    # Крафт
+    if text == "🔨 Крафт":
+        await message.answer(
+            "🔨 **Крафт** 🔨\n\n"
+            "Доступные рецепты:\n"
+            "• /craft potion — 🧪 Лечебное зелье (3 зерна)\n"
+            "• /craft meat — 🍖 Мясо (5 зёрен)",
+            reply_markup=main_kb()
+        )
+        return
+    
     # PvP
     if text == "⚔️ PvP":
         await message.answer("⚔️ Введи ID противника:\nПример: 6900319945", reply_markup=back_kb())
@@ -952,6 +1027,53 @@ async def handle_message(message: Message):
         except:
             await message.answer("❌ Неверный ID!")
         user["awaiting_pvp"] = False
+        return
+    
+    # Инвестиции
+    if text == "💎 Инвестиции":
+        if user["investments"] > 0:
+            days_passed = (datetime.now() - user["investment_time"]).days if user["investment_time"] else 0
+            if days_passed < 1:
+                hours_left = 24 - (datetime.now() - user["investment_time"]).seconds // 3600 if user["investment_time"] else 24
+                await message.answer(f"⏳ У тебя активна инвестиция! Осталось {hours_left} часов до получения прибыли.", reply_markup=main_kb())
+            else:
+                profit = int(user["investments"] * 0.1 * days_passed)
+                user["dubli"] += user["investments"] + profit
+                user["investments"] = 0
+                user["investment_time"] = None
+                save_data(users)
+                await message.answer(f"💰 Ты получил {user['investments'] + profit} дублей (вклад + {profit} прибыль)!", reply_markup=main_kb())
+        else:
+            await message.answer("💎 Введи сумму для инвестиции (мин. 100):", reply_markup=back_kb())
+            user["awaiting_invest"] = True
+        return
+    
+    if user.get("awaiting_invest"):
+        try:
+            amount = int(text)
+            if amount < 100:
+                await message.answer("❌ Минимальная инвестиция — 100 дублей!")
+            elif user["dubli"] < amount:
+                await message.answer(f"❌ Не хватает дублей! У тебя {user['dubli']}💎")
+            else:
+                user["dubli"] -= amount
+                user["investments"] = amount
+                user["investment_time"] = datetime.now()
+                save_data(users)
+                await message.answer(f"💰 Ты инвестировал {amount} дублей под 10% в день! Приходи завтра за прибылью.", reply_markup=main_kb())
+        except:
+            await message.answer("❌ Введи число!")
+        user["awaiting_invest"] = False
+        return
+    
+    # Кланы
+    if text == "👥 Кланы":
+        await message.answer(
+            "👥 **Кланы** 👥\n\n"
+            "• /clan_create Название — создать клан (500💎)\n"
+            "• /clan_join Название — вступить в клан",
+            reply_markup=main_kb()
+        )
         return
     
     # Дать имя
@@ -1013,6 +1135,7 @@ async def handle_callback(call: CallbackQuery):
         else:
             await call.answer(f"❌ Нужно {pet['price']}💎", show_alert=True)
 
+# ========== КОМАНДЫ АДМИНА ==========
 @dp.message(Command("add"))
 async def add_dubli(message: Message):
     if message.from_user.id != MASTER_ADMIN_ID:
@@ -1020,16 +1143,20 @@ async def add_dubli(message: Message):
         return
     args = message.text.split()
     if len(args) < 3:
-        await message.answer("❌ /add ID КОЛИЧЕСТВО")
+        await message.answer("❌ /add ID КОЛИЧЕСТВО\nПример: /add 6900319945 500")
         return
     try:
         target_id = int(args[1])
         amount = int(args[2])
-        if target_id not in users:
-            users[target_id] = get_user(target_id)
+        if str(target_id) not in users:
+            users[str(target_id)] = get_user(target_id)
         users[str(target_id)]["dubli"] += amount
         save_data(users)
         await message.answer(f"✅ Выдано {amount} дублей пользователю {target_id}")
+        try:
+            await bot.send_message(target_id, f"👑 Админ выдал тебе {amount} дублей! 💰")
+        except:
+            pass
     except:
         await message.answer("❌ Ошибка!")
 
@@ -1040,7 +1167,7 @@ async def give_pet(message: Message):
         return
     args = message.text.split(maxsplit=2)
     if len(args) < 3:
-        await message.answer("❌ /give ID НАЗВАНИЕ")
+        await message.answer("❌ /give ID НАЗВАНИЕ\nПример: /give 6900319945 Дракон")
         return
     try:
         target_id = int(args[1])
@@ -1052,16 +1179,82 @@ async def give_pet(message: Message):
                 users[str(target_id)]["pets"].append(pet_id)
                 save_data(users)
                 await message.answer(f"✅ Выдан питомец {pet['name']} пользователю {target_id}")
+                try:
+                    await bot.send_message(target_id, f"👑 Админ выдал тебе питомца {pet['name']}! 🎉")
+                except:
+                    pass
                 return
         await message.answer("❌ Питомец не найден!")
     except:
-        await message.answer("❌ Ошибка!")
+        await message.answer("❌ Ошибка! Пример: /give 6900319945 Дракон")
+
+@dp.message(Command("clan_create"))
+async def clan_create(message: Message):
+    name = message.text.replace("/clan_create", "").strip()
+    if not name:
+        await message.answer("❌ /clan_create Название")
+        return
+    user = get_user(message.from_user.id)
+    if name in clans:
+        await message.answer("❌ Клан с таким названием уже существует!")
+        return
+    if user["dubli"] < 500:
+        await message.answer("❌ Создание клана стоит 500 дублей!")
+        return
+    user["dubli"] -= 500
+    clans[name] = {"owner": message.from_user.id, "members": [message.from_user.id], "balance": 0}
+    user["clan"] = name
+    save_data(users)
+    await message.answer(f"✅ Клан {name} создан!")
+
+@dp.message(Command("clan_join"))
+async def clan_join(message: Message):
+    name = message.text.replace("/clan_join", "").strip()
+    if not name:
+        await message.answer("❌ /clan_join Название")
+        return
+    user = get_user(message.from_user.id)
+    if name not in clans:
+        await message.answer("❌ Клан не найден!")
+        return
+    if user["clan"]:
+        await message.answer("❌ Ты уже в клане!")
+        return
+    clans[name]["members"].append(message.from_user.id)
+    user["clan"] = name
+    save_data(users)
+    await message.answer(f"✅ Ты вступил в клан {name}!")
+
+@dp.message(Command("craft"))
+async def craft_cmd(message: Message):
+    user = get_user(message.from_user.id)
+    item = message.text.replace("/craft", "").strip()
+    
+    if item == "potion":
+        if user["inventory"].get("seed", 0) < 3:
+            await message.answer("❌ Не хватает 3 зёрен для создания зелья!")
+            return
+        user["inventory"]["seed"] -= 3
+        user["inventory"]["potion"] = user["inventory"].get("potion", 0) + 1
+        save_data(users)
+        await message.answer("✅ Ты создал 🧪 Лечебное зелье!")
+    elif item == "meat":
+        if user["inventory"].get("seed", 0) < 5:
+            await message.answer("❌ Не хватает 5 зёрен для создания мяса!")
+            return
+        user["inventory"]["seed"] -= 5
+        user["inventory"]["meat"] = user["inventory"].get("meat", 0) + 1
+        save_data(users)
+        await message.answer("✅ Ты создал 🍖 Мясо!")
+    else:
+        await message.answer("❌ Доступные рецепты: /craft potion, /craft meat")
 
 # ========== ЗАПУСК ==========
 async def main():
-    print(f"✅ МЕГА-БОТ ЗАПУЩЕН!")
+    print(f"✅ МЕГА-БОТ ДЛЯ ПОЛЯШКИ ЗАПУЩЕН!")
     print(f"🐾 ПИТОМЦЕВ: {len(PETS)}")
     print(f"🎮 ИГР: 15")
+    print(f"👑 АДМИН: {MASTER_ADMIN_ID}")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
