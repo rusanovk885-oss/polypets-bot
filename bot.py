@@ -593,4 +593,154 @@ async def handle_message(message: Message):
         )
         return
     
-    # Т
+    # Топ
+    if text == "🏆 Топ":
+        players = []
+        for uid, data in users.items():
+            try:
+                chat = await bot.get_chat(uid)
+                name = chat.username or chat.first_name or str(uid)
+            except:
+                name = str(uid)
+            players.append((name, data["dubli"], len(data["pets"]), data["stats"]["games"]))
+        
+        players.sort(key=lambda x: x[1], reverse=True)
+        top_text = "🏆 **ТОП ИГРОКОВ** 🏆\n\n"
+        for i, (name, dubli, pets, games) in enumerate(players[:15], 1):
+            medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}."
+            top_text += f"{medal} {name[:20]} — {dubli}💎 ({pets} петов)\n"
+        await message.answer(top_text, reply_markup=main_kb())
+        return
+    
+    # Админ команды
+    if text == "💰 Выдать дубли" and user_id in ADMIN_IDS:
+        await message.answer("Введи: `/add ID КОЛИЧЕСТВО`\nПример: /add 6900319945 500", parse_mode="Markdown")
+        return
+    
+    if text == "🎁 Выдать питомца" and user_id in ADMIN_IDS:
+        await message.answer("Введи: `/give ID НАЗВАНИЕ`\nПример: /give 6900319945 Дракон", parse_mode="Markdown")
+        return
+    
+    if text == "📢 Объявление" and user_id in ADMIN_IDS:
+        await message.answer("Введи текст объявления:", reply_markup=back_kb())
+        user["awaiting_broadcast"] = True
+        return
+    
+    if user.get("awaiting_broadcast"):
+        count = 0
+        for uid in users:
+            try:
+                await bot.send_message(uid, f"📢 **ОБЪЯВЛЕНИЕ ОТ АДМИНА** 📢\n\n{text}")
+                count += 1
+                await asyncio.sleep(0.05)
+            except:
+                pass
+        user["awaiting_broadcast"] = False
+        await message.answer(f"✅ Объявление отправлено {count} игрокам!", reply_markup=admin_kb())
+        return
+    
+    if text == "📊 Статистика" and user_id in ADMIN_IDS:
+        total_players = len(users)
+        total_dubli = sum(u["dubli"] for u in users.values())
+        total_pets = sum(len(u["pets"]) for u in users.values())
+        total_games = sum(u["stats"]["games"] for u in users.values())
+        await message.answer(
+            f"📊 **СТАТИСТИКА БОТА** 📊\n\n"
+            f"👥 Игроков: {total_players}\n"
+            f"💰 Дублей в обороте: {total_dubli}\n"
+            f"🐾 Всего питомцев: {total_pets}\n"
+            f"🎮 Сыграно игр: {total_games}",
+            reply_markup=admin_kb()
+        )
+        return
+
+@dp.callback_query()
+async def handle_callback(call: CallbackQuery):
+    user_id = call.from_user.id
+    user = get_user(user_id)
+    data = call.data
+    
+    if data == "back_to_menu":
+        await call.message.edit_text("Главное меню:", reply_markup=main_kb())
+        await call.answer()
+        return
+    
+    if data.startswith("buy_"):
+        pet_id = data.replace("buy_", "")
+        pet = PETS.get(pet_id)
+        
+        if user["dubli"] >= pet["price"]:
+            user["dubli"] -= pet["price"]
+            user["pets"].append(pet_id)
+            await call.message.edit_text(f"✅ Ты купил {pet['name']}! 💖\nОсталось: {user['dubli']}💎")
+            await call.answer(f"Куплен {pet['name']}!")
+        else:
+            await call.answer(f"❌ Не хватает! Нужно {pet['price']}💎", show_alert=True)
+
+@dp.message(Command("add"))
+async def add_dubli(message: Message):
+    user_id = message.from_user.id
+    if user_id not in ADMIN_IDS:
+        await message.answer("❌ Нет доступа!")
+        return
+    
+    args = message.text.split()
+    if len(args) < 3:
+        await message.answer("❌ Использование: /add ID КОЛИЧЕСТВО\nПример: /add 6900319945 500")
+        return
+    
+    try:
+        target_id = int(args[1])
+        amount = int(args[2])
+        if target_id not in users:
+            users[target_id] = get_user(target_id)
+        users[target_id]["dubli"] += amount
+        await message.answer(f"✅ Выдано {amount} дублей пользователю {target_id}")
+        try:
+            await bot.send_message(target_id, f"👑 Админ выдал тебе {amount} дублей! 💰")
+        except:
+            pass
+    except:
+        await message.answer("❌ Ошибка! Пример: /add 6900319945 500")
+
+@dp.message(Command("give"))
+async def give_pet(message: Message):
+    user_id = message.from_user.id
+    if user_id not in ADMIN_IDS:
+        await message.answer("❌ Нет доступа!")
+        return
+    
+    args = message.text.split(maxsplit=2)
+    if len(args) < 3:
+        await message.answer("❌ Использование: /give ID НАЗВАНИЕ\nПример: /give 6900319945 Дракон")
+        return
+    
+    try:
+        target_id = int(args[1])
+        pet_name = args[2].lower()
+        
+        for pet_id, pet in PETS.items():
+            if pet_name in pet["name"].lower():
+                if target_id not in users:
+                    users[target_id] = get_user(target_id)
+                users[target_id]["pets"].append(pet_id)
+                await message.answer(f"✅ Выдан питомец {pet['name']} пользователю {target_id}")
+                try:
+                    await bot.send_message(target_id, f"👑 Админ выдал тебе питомца {pet['name']}! 🎉")
+                except:
+                    pass
+                return
+        await message.answer("❌ Питомец не найден!")
+    except:
+        await message.answer("❌ Ошибка! Пример: /give 6900319945 Дракон")
+
+# ========== ЗАПУСК ==========
+async def main():
+    print("✅ МЕГА-БОТ ЗАПУЩЕН!")
+    print(f"🐾 ПИТОМЦЕВ: {len(PETS)}")
+    print(f"🎮 ИГР: 15")
+    print(f"👑 АДМИНЫ: {ADMIN_IDS}")
+    await dp.start_polling(bot)
+
+if __name__ == "__main__":
+    asyncio.run(main())
